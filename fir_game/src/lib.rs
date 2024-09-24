@@ -58,12 +58,12 @@ impl FirGameState {
         self.size
     }
 
-    pub fn get_square(&self, x : i32, y : i32) -> Result<SqaureState, FirGameError> { // -> Result<>
+    pub fn get_square(&self, x : usize, y : usize) -> Result<SqaureState, FirGameError> { // -> Result<>
         if 0 <= x && x < self.size.x && 0 <= y && y <= self.size.y {
-            self.board[y * self.size.x + x]
+            Ok(self.board[y * self.size.x + x])
         }
         else {
-            FirGameError::InvalidIndexAccessInBoard
+            Err(FirGameError::InvalidIndexAccessInBoard)
         }
     }
 }
