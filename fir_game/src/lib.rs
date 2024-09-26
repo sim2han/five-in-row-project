@@ -8,22 +8,17 @@ enum FirGameError {
 
 #[derive(Copy, Clone, Debug)]
 struct FirBoardSize {
-    pub x : usize,
-    pub y : usize,
+    pub x: usize,
+    pub y: usize,
 }
 
 impl FirBoardSize {
-    pub fn sqaure(n : usize) -> Self {
-        FirBoardSize {
-            x : n,
-            y : n,
-        }
+    pub fn sqaure(n: usize) -> Self {
+        FirBoardSize { x: n, y: n }
     }
 
-    pub fn rectangle(x : usize, y : usize) -> Self {
-        FirBoardSize {
-            x, y
-        }
+    pub fn rectangle(x: usize, y: usize) -> Self {
+        FirBoardSize { x, y }
     }
 }
 
@@ -31,7 +26,7 @@ impl FirBoardSize {
 enum SqaureState {
     Empty,
     Black,
-    White
+    White,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -42,15 +37,15 @@ enum Order {
 
 #[derive(Clone, Debug)]
 struct FirGameState {
-    size : FirBoardSize,
-    board : Vec<SqaureState>,
+    size: FirBoardSize,
+    board: Vec<SqaureState>,
 }
 
 impl FirGameState {
-    pub fn empty_board(size : FirBoardSize) -> Self {
+    pub fn empty_board(size: FirBoardSize) -> Self {
         FirGameState {
             size,
-            board : vec![SqaureState::Empty; size.x * size.y],
+            board: vec![SqaureState::Empty; size.x * size.y],
         }
     }
 
@@ -58,20 +53,18 @@ impl FirGameState {
         self.size
     }
 
-    pub fn get_square(&self, x : usize, y : usize) -> Result<SqaureState, FirGameError> { // -> Result<>
+    pub fn get_square(&self, x: usize, y: usize) -> Result<SqaureState, FirGameError> {
+        // -> Result<>
         if 0 <= x && x < self.size.x && 0 <= y && y <= self.size.y {
             Ok(self.board[y * self.size.x + x])
-        }
-        else {
+        } else {
             Err(FirGameError::InvalidIndexAccessInBoard)
         }
     }
 }
 
 /// Game Player of five in row.
-struct FirGame {
-
-}
+struct FirGame {}
 
 pub fn add(left: u64, right: u64) -> u64 {
     left + right
