@@ -14,10 +14,11 @@ struct FirBoardSize {
 
 impl FirBoardSize {
     pub fn sqaure(n: usize) -> Self {
-        FirBoardSize { x: n, y: n }
+        FirBoardSize::rectangle(n, n)
     }
 
     pub fn rectangle(x: usize, y: usize) -> Self {
+        assert!(x > 0 && y > 0);
         FirBoardSize { x, y }
     }
 }
@@ -66,17 +67,10 @@ impl FirGameState {
 /// Game Player of five in row.
 struct FirGame {}
 
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+    fn it_works() {}
 }

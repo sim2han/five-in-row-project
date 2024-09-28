@@ -1,0 +1,16 @@
+rest api
+
+1. user registration - matching
+
+server  <== server state check ==   client
+        <== user registration  ==
+        <== socket open        ==>
+         ... (opponent enter)
+         == match state update ==>
+
+
+
+0. connection check
+
+server == connection check ==>  client
+       <== responce        ==
