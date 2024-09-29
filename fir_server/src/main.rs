@@ -2,6 +2,7 @@ use std::convert::Infallible;
 use std::net::SocketAddr;
 
 use fir_server;
+use std::sync::mpsc;
 use http_body_util::{combinators::BoxBody, BodyExt};
 use http_body_util::{Empty, Full};
 use hyper::body::Frame;
@@ -24,7 +25,7 @@ async fn new_connection(
 }
 
 // https://hyper.rs/guides/1/server/echo/
-async fn echo(
+async fn restful_receive(
     req: Request<hyper::body::Incoming>,
 ) -> Result<Response<BoxBody<Bytes, hyper::Error>>, hyper::Error> {
     match (req.method(), req.uri().path()) {
@@ -94,7 +95,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
         tokio::task::spawn(async move {
             if let Err(err) = http1::Builder::new()
-                .serve_connection(io, service_fn(echo))
+                .serve_connection(io, service_fn(restful_receive))
                 .await
             {
                 eprintln!("Error serving connection: {:?}", err);

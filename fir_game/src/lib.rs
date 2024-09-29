@@ -7,6 +7,12 @@ enum FirGameError {
 }
 
 #[derive(Copy, Clone, Debug)]
+pub struct Coord {
+    pub x: u32,
+    pub y: u32,
+}
+
+#[derive(Copy, Clone, Debug)]
 struct FirBoardSize {
     pub x: usize,
     pub y: usize,

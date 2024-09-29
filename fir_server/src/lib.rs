@@ -1,6 +1,7 @@
 mod game_queue;
 mod match_queue;
 mod thread_pool;
+mod game;
 
 use std::hash::{DefaultHasher, Hash, Hasher};
 
