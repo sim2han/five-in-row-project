@@ -1,3 +1,5 @@
+use std::thread;
+use std::sync::mpsc::{self, Receiver};
 use super::game_queue;
 use std::collections::VecDeque;
 
@@ -21,4 +23,19 @@ impl MatchQueue {
     }
 }
 
-pub fn start_match_queue_thread() {}
+pub fn start_match_queue_thread() -> mpsc::Sender<UserInfo> {
+    let (sender, receiver) = mpsc::channel::<UserInfo>();
+    thread::spawn(move || {
+        loop {
+            match receiver.recv() {
+                Ok(userInfo) => {
+
+                }
+                Err(e) => {
+                    println!("Error : {e:?}");
+                }
+            }
+        }
+    });
+    sender
+}

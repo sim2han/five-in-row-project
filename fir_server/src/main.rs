@@ -33,36 +33,6 @@ async fn restful_receive(
         (&Method::GET, "/state") => Ok(Response::new(full("Server State is Ok"))),
         (&Method::GET, "/connect") => new_connection(req).await,
         (&Method::POST, "/echo") => Ok(Response::new(req.into_body().boxed())),
-        (&Method::POST, "/echo/uppercase") => {
-            let frame_stream = req.into_body().map_frame(|frame| {
-                let frame = if let Ok(data) = frame.into_data() {
-                    data.iter()
-                        .map(|byte| byte.to_ascii_uppercase())
-                        .collect::<Bytes>()
-                } else {
-                    Bytes::new()
-                };
-
-                Frame::data(frame)
-            });
-
-            Ok(Response::new(frame_stream.boxed()))
-        }
-        (&Method::POST, "/echo/reversed") => {
-            let upper = req.body().size_hint().upper().unwrap_or(u64::MAX);
-            if upper > 1034 * 64 {
-                let mut resp = Response::new(full("Body too big"));
-                *resp.status_mut() = hyper::StatusCode::PAYLOAD_TOO_LARGE;
-                return Ok(resp);
-            }
-
-            let whole_body = req.collect().await?.to_bytes();
-
-            let reversed_body = whole_body.iter().rev().cloned().collect::<Vec<u8>>();
-
-            Ok(Response::new(full(reversed_body)))
-        }
-
         _ => {
             let mut not_found = Response::new(empty());
             *not_found.status_mut() = StatusCode::NOT_FOUND;
