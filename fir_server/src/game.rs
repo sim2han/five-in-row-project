@@ -1,7 +1,6 @@
 /**
  * Game player
  */
-
 use fir_game;
 use thiserror::Error;
 
@@ -14,7 +13,7 @@ pub enum GameCommand {
 #[derive(Error, Debug)]
 pub enum GameError {
     #[error("unkown command recieved: {0}")]
-    UnkownCommand(String)
+    UnkownCommand(String),
 }
 
 fn parse_command(command: String) -> Result<GameCommand, GameError> {
@@ -26,13 +25,9 @@ fn parse_command(command: String) -> Result<GameCommand, GameError> {
         "play" => {
             let x = command.next().unwrap().parse::<u32>().unwrap();
             let y = command.next().unwrap().parse::<u32>().unwrap();
-            Ok(GameCommand::Play(fir_game::Coord{x, y}))
+            Ok(GameCommand::Play(fir_game::Coord { x, y }))
         }
-        "resign" => {
-            Ok(GameCommand::Resign)
-        },
-        _ => {
-            Err(GameError::UnkownCommand(String::from(first)))
-        }
+        "resign" => Ok(GameCommand::Resign),
+        _ => Err(GameError::UnkownCommand(String::from(first))),
     }
 }
