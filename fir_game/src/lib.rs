@@ -1,9 +1,15 @@
-use thiserror::Error;
+use std::io::Empty;
 
-#[derive(Error, Debug)]
-enum FirGameError {
-    #[error("invalid index access in baord")]
-    InvalidIndexAccessInBoard,
+mod prelude {}
+
+mod error {
+    #[derive(thiserror::Error, Debug)]
+    pub enum FirError {
+        #[error("invalid index access in baord")]
+        InvalidIndexAccessInBoard,
+        #[error("target square already used")]
+        TargetSquareAlreadyUsed,
+    }
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -29,15 +35,17 @@ impl FirBoardSize {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Default)]
 enum SqaureState {
+    #[default]
     Empty,
     Black,
     White,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Default)]
 enum Order {
+    #[default]
     Black,
     White,
 }
@@ -60,18 +68,67 @@ impl FirGameState {
         self.size
     }
 
-    pub fn get_square(&self, x: usize, y: usize) -> Result<SqaureState, FirGameError> {
+    pub fn get_square(&self, x: usize, y: usize) -> Result<SqaureState, error::FirError> {
         // -> Result<>
-        if 0 <= x && x < self.size.x && 0 <= y && y <= self.size.y {
+        if x < self.size.x && y <= self.size.y {
             Ok(self.board[y * self.size.x + x])
         } else {
-            Err(FirGameError::InvalidIndexAccessInBoard)
+            Err(error::FirError::InvalidIndexAccessInBoard)
+        }
+    }
+
+    fn to1d(&self, x: usize, y: usize) -> usize {
+        self.size.x * y + x
+    }
+
+    pub fn set_square(&mut self, x: usize, y: usize, order: Order) -> Result<(), error::FirError> {
+        if x < self.size.x && y <= self.size.y {
+            let s = self.board[self.to1d(x, y)];
+            if let SqaureState::Empty = s {
+                let idx = self.to1d(x, y);
+                self.board[idx] = match order {
+                    Order::Black => SqaureState::Black,
+                    Order::White => SqaureState::White,
+                };
+                Ok(())
+            } else {
+                Err(error::FirError::TargetSquareAlreadyUsed)
+            }
+        } else {
+            Err(error::FirError::InvalidIndexAccessInBoard)
         }
     }
 }
 
-/// Game Player of five in row.
-struct FirGame {}
+/// Game
+#[derive(Debug)]
+pub struct FirGame {
+    state: FirGameState,
+    order: Order,
+}
+
+#[derive(Default)]
+pub enum Response {
+    #[default]
+    OnGoing,
+    WhiteWin,
+    BlackWin,
+    Draw,
+}
+
+impl FirGame {
+    pub fn new() -> Self {
+        FirGame {
+            state: FirGameState::empty_board(FirBoardSize::sqaure(8)),
+            order: Order::Black,
+        }
+    }
+
+    pub fn play(&mut self, x: usize, y: usize) -> Result<Response, error::FirError> {
+        self.state.set_square(x, y, self.order)?;
+        Ok(Response::OnGoing)
+    }
+}
 
 #[cfg(test)]
 mod tests {
