@@ -1,10 +1,8 @@
-use super::game_queue;
+use crate::prelude::*;
+
 use futures::sink::SinkExt;
 use futures::stream::StreamExt;
-use http_body_util::Full;
-use hyper::body::{Bytes, Incoming};
 use hyper::upgrade::Upgraded;
-use hyper::{Request, Response};
 use hyper_tungstenite::{tungstenite, HyperWebsocket, WebSocketStream};
 use hyper_util::rt::TokioIo;
 use std::collections::VecDeque;
@@ -72,10 +70,14 @@ impl MatchQueue {
         loop {
             let mut resv = self.receiver.recv().await.unwrap();
             resv.connect().await;
-            //println!("push {:?}", resv);
-            super::utility::log("connect complete");
+            log("connect complete");
 
-            resv.open_stream.as_mut().unwrap().send(Message::text("tk")).await.unwrap();
+            resv.open_stream
+                .as_mut()
+                .unwrap()
+                .send(Message::text("tk"))
+                .await
+                .unwrap();
 
             loop {
                 let m = resv.open_stream.as_mut().unwrap().next().await;
@@ -85,28 +87,37 @@ impl MatchQueue {
                     match message.as_ref().unwrap() {
                         Message::Text(msg) => {
                             println!("Received text message: {msg}");
-                            websocket.send(Message::text("Thank you, come again.")).await.unwrap();
-                        },
+                            websocket
+                                .send(Message::text("Thank you, come again."))
+                                .await
+                                .unwrap();
+                        }
                         Message::Binary(msg) => {
                             println!("Received binary message: {msg:02X?}");
-                            websocket.send(Message::binary(b"Thank you, come again.".to_vec())).await.unwrap();
-                        },
+                            websocket
+                                .send(Message::binary(b"Thank you, come again.".to_vec()))
+                                .await
+                                .unwrap();
+                        }
                         Message::Ping(msg) => {
                             // No need to send a reply: tungstenite takes care of this for you.
                             println!("Received ping message: {msg:02X?}");
-                        },
+                        }
                         Message::Pong(msg) => {
                             println!("Received pong message: {msg:02X?}");
                         }
                         Message::Close(msg) => {
                             // No need to send a reply: tungstenite takes care of this for you.
                             if let Some(msg) = &msg {
-                                println!("Received close message with code {} and message: {}", msg.code, msg.reason);
+                                println!(
+                                    "Received close message with code {} and message: {}",
+                                    msg.code, msg.reason
+                                );
                             } else {
                                 println!("Received close message");
                             }
                             break;
-                        },
+                        }
                         Message::Frame(_msg) => {
                             unreachable!();
                         }

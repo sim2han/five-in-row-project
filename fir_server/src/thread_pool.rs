@@ -2,7 +2,6 @@
 
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
-use std::time::Duration;
 
 pub struct ThreadPool {
     workers: Vec<Worker>,
@@ -93,6 +92,7 @@ impl Worker {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::Duration;
 
     #[test]
     fn threadpool_test() {
