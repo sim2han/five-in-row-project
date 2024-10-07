@@ -84,7 +84,10 @@ async fn run_server(
                             let socket = socket;
 
                             // send socket to user queue
-                            value.send(UserRegisterData::new(socket));
+                            // you must await to connect websocket
+                            if let Err(e) = value.send(UserRegisterData::new(socket)).await {
+                                log(format!("Error: {e}").as_str());
+                            };
 
                             // map websocket response to Response<BoxBody<..>>
                             let mut res = Response::new(
