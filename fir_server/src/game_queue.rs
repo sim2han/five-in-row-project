@@ -38,12 +38,12 @@ impl GameQueue {
         self.sender.clone()
     }
 
-    pub async fn run(mut self) {
+    pub async fn run(mut self, sender: Sender<crate::database::UpdateQuery>) {
         loop {
             let recv = self.receiver.recv().await.unwrap();
 
             let gameroom = GameRoom::from_data(recv);
-            tokio::spawn(gameroom.run());
+            tokio::spawn(gameroom.run(sender.clone()));
         }
     }
 }
@@ -74,5 +74,31 @@ impl GameRoom {
 
     // this function bring its data,
     // so data will be deleted when this function ends
-    pub async fn run(self) {}
+    pub async fn run(self, sender: Sender<crate::database::UpdateQuery>) {
+        let (s, mut r ) = tokio::sync::mpsc::channel(10);
+        
+        tokio::spawn(GameRoom::player1_receive(s.clone()));
+        tokio::spawn(GameRoom::player2_receive(s.clone()));
+
+        loop {
+            let message = r.recv().await.unwrap();
+        }
+    }
+
+    async fn player1_receive(sender: Sender<PlayCommand>) {
+
+    }
+
+    async fn player2_receive(sender: Sender<PlayCommand>) {
+
+    }
+}
+
+enum Side {
+    Black, White, None
+}
+
+/// command interthrowd by client and server
+struct PlayCommand {
+    side: Side,
 }

@@ -140,6 +140,9 @@ async fn run_server(
 pub async fn run() {
     println!("Server Start!");
 
+    let db = database::Database::new();
+    let db_sender = db.get_sender();
+
     let gameq = game_queue::GameQueue::new();
     let game_sender = gameq.get_sender();
 
@@ -148,8 +151,13 @@ pub async fn run() {
 
     let server_handle = tokio::spawn(run_server(sender));
     let match_queue_handle = tokio::spawn(match_queue::MatchQueue::run(matchq));
-    let game_queue_handle = tokio::spawn(gameq.run());
+    let game_queue_handle = tokio::spawn(gameq.run(db_sender.clone()));
+    let db_handle = tokio::spawn(db.run());
 
-    tokio::join!(match_queue_handle, server_handle, game_queue_handle);
+    server_handle.await.unwrap().unwrap();
+    match_queue_handle.await.unwrap();
+    game_queue_handle.await.unwrap();
+    db_handle.await.unwrap();
+
     println!("Server end!");
 }
