@@ -67,6 +67,8 @@ impl MatchQueue {
     }
 
     pub async fn run(mut self) {
+        log("match queue start!");
+
         loop {
             let mut resv = self.receiver.recv().await.unwrap();
             resv.connect().await;

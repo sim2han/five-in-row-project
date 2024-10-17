@@ -1,7 +1,8 @@
 use std::hash::{DefaultHasher, Hash, Hasher};
 
-#[derive(Clone, Hash)]
+#[derive(Clone, Hash, Debug)]
 pub struct UserInfo {
+    pub name: String,
     pub code: String,
     pub id: String,
     pub pwd: String,
@@ -9,10 +10,11 @@ pub struct UserInfo {
 }
 
 impl UserInfo {
-    fn from_username(username: String) -> Self {
+    pub fn from_username(username: String) -> Self {
         //let mut hasher = DefaultHasher::new();
         //username.hash(&mut hasher);
         UserInfo {
+            name: username,
             code: String::new(),
             id: String::new(),
             pwd: String::new(),
@@ -20,7 +22,7 @@ impl UserInfo {
         }
     }
 
-    fn get_code(&self) -> &str {
+    pub fn get_code(&self) -> &str {
         self.code.as_str()
     }
 }

@@ -7,7 +7,7 @@ use fir_game;
 use hyper::upgrade::Upgraded;
 use hyper_tungstenite::WebSocketStream;
 use hyper_util::rt::TokioIo;
-use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::sync::mpsc::{channel, Receiver, Sender};
 
 pub struct GameInitData {
     player1: WebSocketStream<TokioIo<Upgraded>>,
@@ -24,14 +24,17 @@ impl GameInitData {
 }
 
 pub struct GameQueue {
-    sender: Sender<GameInitData>,
-    receiver: Receiver<GameInitData>,
+    sender: tokio::sync::mpsc::Sender<GameInitData>,
+    receiver: tokio::sync::mpsc::Receiver<GameInitData>,
 }
 
 impl GameQueue {
     pub fn new() -> Self {
-        let (sender, receiver) = tokio::sync::mpsc::channel(100);
-        GameQueue { sender, receiver }
+        let (tx, rx) = tokio::sync::mpsc::channel(100);
+        GameQueue {
+            sender: tx,
+            receiver: rx,
+        }
     }
 
     pub fn get_sender(&self) -> Sender<GameInitData> {
@@ -75,30 +78,41 @@ impl GameRoom {
     // this function bring its data,
     // so data will be deleted when this function ends
     pub async fn run(self, sender: Sender<crate::database::UpdateQuery>) {
-        let (s, mut r ) = tokio::sync::mpsc::channel(10);
-        
-        tokio::spawn(GameRoom::player1_receive(s.clone()));
-        tokio::spawn(GameRoom::player2_receive(s.clone()));
+        let (s, mut r) = channel(10);
+
+        let ms = s.clone();
+        tokio::spawn(async move {
+            loop {
+                GameRoom::player1_receive(ms.clone()).await;
+            }
+        });
+
+        let ms = s.clone();
+        tokio::spawn(async move {
+            loop {
+                GameRoom::player2_receive(ms.clone()).await;
+            }
+        });
 
         loop {
             let message = r.recv().await.unwrap();
         }
     }
 
-    async fn player1_receive(sender: Sender<PlayCommand>) {
+    async fn player1_receive(sender: Sender<PlayCommand>) {}
 
-    }
-
-    async fn player2_receive(sender: Sender<PlayCommand>) {
-
-    }
+    async fn player2_receive(sender: Sender<PlayCommand>) {}
 }
 
+#[derive(Debug, Clone, Copy)]
 enum Side {
-    Black, White, None
+    Black,
+    White,
+    None,
 }
 
 /// command interthrowd by client and server
+#[derive(Debug, Clone, Copy)]
 struct PlayCommand {
     side: Side,
 }
