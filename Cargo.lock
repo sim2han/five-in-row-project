@@ -187,6 +187,7 @@ dependencies = [
  "hyper-tungstenite",
  "hyper-util",
  "serde",
+ "serde_derive",
  "serde_json",
  "thiserror",
  "tokio",

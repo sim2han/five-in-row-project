@@ -1,28 +1,20 @@
-use std::hash::{DefaultHasher, Hash, Hasher};
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Hash, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UserInfo {
-    pub name: String,
-    pub code: String,
     pub id: String,
     pub pwd: String,
-    pub login_state: bool,
+    pub rating: u32,
 }
 
+/*
 impl UserInfo {
-    pub fn from_username(username: String) -> Self {
-        //let mut hasher = DefaultHasher::new();
-        //username.hash(&mut hasher);
+    pub fn from_info(id: String, pwd: String, rating: u32) -> Self {
         UserInfo {
-            name: username,
-            code: String::new(),
-            id: String::new(),
-            pwd: String::new(),
-            login_state: false,
+            id,
+            pwd,
+            rating: 600,
         }
     }
-
-    pub fn get_code(&self) -> &str {
-        self.code.as_str()
-    }
 }
+*/

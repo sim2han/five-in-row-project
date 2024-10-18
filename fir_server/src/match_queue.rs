@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{database::data::TimeControl, game_queue::GameInitData, prelude::*};
 
 use futures::sink::SinkExt;
 use futures::stream::StreamExt;
@@ -8,13 +8,6 @@ use hyper_util::rt::TokioIo;
 use std::collections::VecDeque;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tungstenite::Message;
-
-/// user information for matching
-pub struct UserInfo {
-    ip_address: String,
-    user_name: String,
-    rating: i32,
-}
 
 #[derive(Debug)]
 pub struct UserRegisterData {
@@ -44,6 +37,7 @@ impl UserRegisterData {
 }
 
 /// Match queue
+///
 /// Basically, match queue matches two client into a game.
 pub struct MatchQueue {
     queue: VecDeque<UserRegisterData>,
@@ -66,7 +60,7 @@ impl MatchQueue {
         Sender::clone(&self.sender)
     }
 
-    pub async fn run(mut self) {
+    pub async fn run(mut self, gameq: Sender<GameInitData>) {
         log("match queue start!");
 
         loop {
@@ -145,9 +139,18 @@ impl MatchQueue {
 
             self.queue.push_back(resv);
             // make match
-            if self.queue.len() == 2 {
+            if self.queue.len() >= 2 {
                 let player1 = self.queue.pop_front().unwrap();
                 let player2 = self.queue.pop_front().unwrap();
+                let init = GameInitData::new(
+                    player1,
+                    player2,
+                    TimeControl {
+                        seconds: 100,
+                        fisher: 0,
+                    },
+                );
+
                 super::utility::log("make match");
             }
         }

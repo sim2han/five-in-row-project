@@ -2,42 +2,43 @@ mod cli;
 mod database;
 mod game;
 mod game_queue;
+mod http_handler;
 mod match_queue;
 mod thread_pool;
-mod http_handler;
-pub mod utility;
+mod utility;
 
 pub mod prelude {
     pub use super::utility::log;
 }
 use self::prelude::*;
+use tokio::spawn;
 
-/// make threads and run
+/// start server
 pub async fn run() -> Result<(), Box<dyn std::error::Error + Sync + Send>> {
-    log("Server start!");
+    log("server start!");
 
-    let db = database::Database::new();
-    let db_sender = db.get_sender();
+    let db = database::DataManager::new();
+    let dbq = db.get_sender();
     let real_db = db.get_db();
 
-    let gameq = game_queue::GameQueue::new();
-    let game_sender = gameq.get_sender();
+    let game = game_queue::GameQueue::new();
+    let gameq = game.get_sender();
 
-    let mut matchq = match_queue::MatchQueue::new();
-    let sender = matchq.get_sender();
+    let mut game_match = match_queue::MatchQueue::new();
+    let matchq = game_match.get_sender();
 
-    let server_handle = tokio::spawn(http_handler::run_server(sender));
-    let match_queue_handle = tokio::spawn(match_queue::MatchQueue::run(matchq));
-    let game_queue_handle = tokio::spawn(gameq.run(db_sender.clone()));
-    let db_handle = tokio::spawn(db.run());
-    let cli_handle = tokio::spawn(cli::run(db_sender.clone(), real_db));
+    let server_handle = spawn(http_handler::run_server(matchq, real_db.clone()));
+    let match_queue_handle = spawn(game_match.run(gameq.clone()));
+    let game_queue_handle = spawn(game.run(dbq.clone()));
+    let db_handle = spawn(db.run());
+    let cli_handle = spawn(cli::run(dbq.clone(), real_db.clone()));
 
-    let _ = server_handle.await?;
+    server_handle.await??;
     match_queue_handle.await?;
     game_queue_handle.await?;
     db_handle.await?;
-    cli_handle.await?;
+    cli_handle.await??;
 
-    log("Server end!");
+    log("server end!");
     Ok(())
 }

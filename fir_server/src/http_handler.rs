@@ -1,7 +1,9 @@
+use crate::database::RealData;
 use crate::prelude::*;
-use std::convert::Infallible;
 use std::net::SocketAddr;
+use std::sync::Arc;
 
+use crate::match_queue::UserRegisterData;
 use http_body_util::{combinators::BoxBody, BodyExt};
 use http_body_util::{Empty, Full};
 use hyper::body::{self, Bytes};
@@ -10,13 +12,15 @@ use hyper::service::service_fn;
 use hyper::{Method, StatusCode};
 use hyper::{Request, Response};
 use hyper_util::rt::TokioIo;
-use crate::match_queue::UserRegisterData;
 use tokio::net::TcpListener;
 use tokio::sync::mpsc::Sender;
+use tokio::sync::Mutex;
 
+/*
 async fn hello(_: Request<hyper::body::Incoming>) -> Result<Response<Full<Bytes>>, Infallible> {
     Ok(Response::new(Full::new(Bytes::from("Hello, World!"))))
 }
+*/
 
 fn empty() -> BoxBody<Bytes, hyper::Error> {
     Empty::<Bytes>::new()
@@ -32,6 +36,7 @@ fn full<T: Into<Bytes>>(chunk: T) -> BoxBody<Bytes, hyper::Error> {
 
 pub async fn run_server(
     queue_sender: Sender<crate::match_queue::UserRegisterData>,
+    data: Arc<Mutex<RealData>>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     log("http handle fn start!");
 
@@ -48,9 +53,12 @@ pub async fn run_server(
 
         // make service function
         // https://hyper.rs/guides/1/server/echo/
+        // make copy and move sender and data
         let sender = queue_sender.clone();
+        let data = data.clone();
         let service = service_fn(move |mut req: Request<body::Incoming>| {
-            let value = sender.clone();
+            let sender = sender.clone();
+            let data = data.clone();
             async move {
                 match (req.method(), req.uri().path()) {
                     (&Method::GET, "/") => Ok(Response::new(full("Hello, World!"))),
@@ -72,8 +80,7 @@ pub async fn run_server(
                             let socket = socket;
 
                             // send socket to user queue
-                            // you must await to connect websocket
-                            if let Err(e) = value.send(UserRegisterData::new(socket)).await {
+                            if let Err(e) = sender.send(UserRegisterData::new(socket)).await {
                                 log(format!("Error: {e}").as_str());
                             };
 
@@ -87,15 +94,19 @@ pub async fn run_server(
                             );
                             *res.status_mut() = response.status();
                             *res.headers_mut() = response.headers().clone();
-                            return Ok(res);
+                            Ok(res)
                         } else {
                             // request is not for protocol upgrade.
-                            return Ok(Response::new(full("Send me a corret header")));
+                            Ok(Response::new(full("Send me a corret header")))
                         }
                     }
 
-                    // test
-                    (&Method::GET, "/echo") => Ok(Response::new(req.into_body().boxed())),
+                    // database access test
+                    (&Method::GET, "/getall") => {
+                        let data = data.lock().await;
+                        let data = data.get_all_user_serizlie().unwrap();
+                        Ok(Response::new(full(data)))
+                    }
 
                     // default
                     _ => {
@@ -118,7 +129,7 @@ pub async fn run_server(
                 .with_upgrades()
                 .await
             {
-                eprintln!("Error serving connection: {:?}", err);
+                log(&format!("Error serving connection: {:?}", err));
             }
         });
     }

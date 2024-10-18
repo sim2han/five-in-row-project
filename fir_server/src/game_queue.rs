@@ -1,31 +1,33 @@
-/**
- * Game pool
- */
-use super::thread_pool;
 use fir_game;
 
+use crate::{database::data::*, match_queue::UserRegisterData};
 use hyper::upgrade::Upgraded;
 use hyper_tungstenite::WebSocketStream;
 use hyper_util::rt::TokioIo;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 
 pub struct GameInitData {
-    player1: WebSocketStream<TokioIo<Upgraded>>,
-    player2: WebSocketStream<TokioIo<Upgraded>>,
+    player1: UserRegisterData,
+    player2: UserRegisterData,
+    time: TimeControl,
 }
 
 impl GameInitData {
-    pub fn new(
-        player1: WebSocketStream<TokioIo<Upgraded>>,
-        player2: WebSocketStream<TokioIo<Upgraded>>,
-    ) -> Self {
-        GameInitData { player1, player2 }
+    pub fn new(player1: UserRegisterData, player2: UserRegisterData, time: TimeControl) -> Self {
+        GameInitData {
+            player1,
+            player2,
+            time,
+        }
     }
 }
 
+///
+/// <examples>
+///
 pub struct GameQueue {
-    sender: tokio::sync::mpsc::Sender<GameInitData>,
-    receiver: tokio::sync::mpsc::Receiver<GameInitData>,
+    sender: Sender<GameInitData>,
+    receiver: Receiver<GameInitData>,
 }
 
 impl GameQueue {
@@ -53,24 +55,21 @@ impl GameQueue {
 
 pub struct GameRoom {
     // 0: black, 1: white
-    streams: [hyper_tungstenite::WebSocketStream<TokioIo<Upgraded>>; 2],
+    users: [UserRegisterData; 2],
     game: fir_game::FirGame,
 }
 
 impl GameRoom {
-    pub fn new(
-        player1: WebSocketStream<TokioIo<Upgraded>>,
-        player2: WebSocketStream<TokioIo<Upgraded>>,
-    ) -> Self {
+    pub fn new(player1: UserRegisterData, player2: UserRegisterData) -> Self {
         GameRoom {
-            streams: [player1, player2],
+            users: [player1, player2],
             game: fir_game::FirGame::new(),
         }
     }
 
     pub fn from_data(data: GameInitData) -> Self {
         GameRoom {
-            streams: [data.player1, data.player2],
+            users: [data.player1, data.player2],
             game: fir_game::FirGame::new(),
         }
     }
@@ -81,18 +80,10 @@ impl GameRoom {
         let (s, mut r) = channel(10);
 
         let ms = s.clone();
-        tokio::spawn(async move {
-            loop {
-                GameRoom::player1_receive(ms.clone()).await;
-            }
-        });
+        tokio::spawn(Self::player1_receive(ms.clone()));
 
         let ms = s.clone();
-        tokio::spawn(async move {
-            loop {
-                GameRoom::player2_receive(ms.clone()).await;
-            }
-        });
+        tokio::spawn(Self::player2_receive(ms.clone()));
 
         loop {
             let message = r.recv().await.unwrap();
@@ -102,13 +93,6 @@ impl GameRoom {
     async fn player1_receive(sender: Sender<PlayCommand>) {}
 
     async fn player2_receive(sender: Sender<PlayCommand>) {}
-}
-
-#[derive(Debug, Clone, Copy)]
-enum Side {
-    Black,
-    White,
-    None,
 }
 
 /// command interthrowd by client and server

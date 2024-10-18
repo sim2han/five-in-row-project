@@ -1,43 +1,54 @@
 use tokio::sync::Mutex;
 
+use crate::database::{data::*, DbSender, RealData, UpdateQuery};
 use crate::prelude::*;
-use crate::database::{DbSender, UpdateQuery, UserInfo, RealData};
 use std::io;
 use std::sync::Arc;
 
-pub async fn run(mut tx: DbSender, mut db: Arc<Mutex<RealData>>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+pub async fn run(
+    tx: DbSender,
+    db: Arc<Mutex<RealData>>,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     loop {
         let mut buf = String::new();
         io::stdin().read_line(&mut buf).unwrap();
-        let buf = String::from(buf.trim());
-        
-        if buf == "Hello" {
-            log("helooo");
-        }
-        else if buf == "exit" {
-            todo!();
-        }
-        else if buf == "sample" {
-            add_sample_datas(&mut tx).await?;
-        }
-        else if buf == "getdb" {
-            let mut db = db.lock().await;
-            if let Some(data) = db.get_user_data(String::from("AAAA")) {
-                log(&format!("{:?}", data));
-            }
-            else {
-                log("cannot find aaaa");
-            }
-        }
-        else {
-            log(buf.as_str());
+        let command = buf
+            .split_whitespace()
+            .map(|str| String::from(str))
+            .collect::<Vec<String>>();
+
+        log(&format!("command {}", command[0]));
+
+        if command[0] == "exit" {
+            break;
+        } else if command[0] == "sample" {
+            let txc = tx.clone();
+            let _ = tokio::spawn(async move {
+                add_sample_datas(txc).await.unwrap();
+            })
+            .await;
+        } else if command[0] == "getdb" {
+            let data = db.lock().await;
+            let user_data = data.get_all_user();
+            println!("{user_data:?}");
+        } else {
+            log(&format!("unkown command {}", command[0]));
         }
     }
+    Ok(())
 }
 
-async fn add_sample_datas(tx: &mut DbSender) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    tx.send(UpdateQuery::UserInfo(
-        UserInfo::from_username(String::from("AAAA"))
-    )).await?;
+async fn add_sample_datas(tx: DbSender) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let user_info = vec![vec!["Alice", "1234"], vec!["Jonathan", "qwerty"]];
+
+    for info in user_info {
+        tx.send(UpdateQuery::UserInfo(UserInfo {
+            id: String::from(info[0]),
+            pwd: String::from(info[1]),
+            rating: 10,
+        }))
+        .await?;
+    }
+
     Ok(())
 }

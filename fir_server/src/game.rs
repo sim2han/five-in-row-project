@@ -1,12 +1,13 @@
 /**
  * Game player
  */
-use fir_game;
+use crate::database::data::Coord;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum GameCommand {
-    Play(fir_game::Coord),
+    Play(Coord),
     Resign,
 }
 
@@ -25,7 +26,7 @@ fn parse_command(command: String) -> Result<GameCommand, GameError> {
         "play" => {
             let x = command.next().unwrap().parse::<u32>().unwrap();
             let y = command.next().unwrap().parse::<u32>().unwrap();
-            Ok(GameCommand::Play(fir_game::Coord { x, y }))
+            Ok(GameCommand::Play(Coord { x, y }))
         }
         "resign" => Ok(GameCommand::Resign),
         _ => Err(GameError::UnkownCommand(String::from(first))),
