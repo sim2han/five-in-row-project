@@ -11,15 +11,17 @@ use tungstenite::Message;
 
 #[derive(Debug)]
 pub struct UserRegisterData {
+    pub id: String,
     //stream: hyper_tungstenite::WebSocketStream<TokioIo<Upgraded>>,
     stream: Option<HyperWebsocket>,
-    open_stream: Option<WebSocketStream<TokioIo<Upgraded>>>,
+    pub open_stream: Option<WebSocketStream<TokioIo<Upgraded>>>,
 }
 
 impl UserRegisterData {
     //pub fn new(stream: hyper_tungstenite::WebSocketStream<TokioIo<Upgraded>>) -> Self {
-    pub fn new(stream: HyperWebsocket) -> Self {
+    pub fn new(id: String, stream: HyperWebsocket) -> Self {
         Self {
+            id,
             stream: Some(stream),
             open_stream: None,
         }
@@ -31,9 +33,80 @@ impl UserRegisterData {
         self.open_stream = Some(stream.await.unwrap());
     }
 
-    fn get_stream(&mut self) -> &WebSocketStream<TokioIo<Upgraded>> {
-        &self.open_stream.as_ref().unwrap()
+    fn get_stream(&mut self) -> &mut WebSocketStream<TokioIo<Upgraded>> {
+        self.open_stream.as_mut().unwrap()
     }
+/*
+    async fn sample_run(&mut self) {
+        log(&format!("sample run start"));
+
+        self.open_stream
+            .as_mut()
+            .unwrap()
+            .send(Message::text("Hello"))
+            .await
+            .unwrap();
+
+        loop {
+            let m = self.get_stream().next().await;
+            let websocket = self.open_stream.as_mut().unwrap();
+
+            if let Some(ref message) = m {
+                match message {
+                    Ok(message) => {
+                        match message {
+                            Message::Text(msg) => {
+                                log(&format!("Received text message: {msg}"));
+                                websocket
+                                    .send(Message::text(format!("I receive {msg}.")))
+                                    .await
+                                    .unwrap();
+                                if msg == "close" {
+                                    break;
+                                }
+                            }
+                            Message::Binary(msg) => {
+                                log(&format!("Received binary message: {msg:02X?}"));
+                                websocket
+                                    .send(Message::binary(b"Thank you, come again.".to_vec()))
+                                    .await
+                                    .unwrap();
+                            }
+                            Message::Ping(msg) => {
+                                // No need to send a reply: tungstenite takes care of this for you.
+                                log(&format!("Received ping message: {msg:02X?}"));
+                            }
+                            Message::Pong(msg) => {
+                                log(&format!("Received pong message: {msg:02X?}"));
+                            }
+                            Message::Close(msg) => {
+                                // No need to send a reply: tungstenite takes care of this for you.
+                                if let Some(msg) = &msg {
+                                    log(&format!(
+                                        "Received close message with code {} and message: {}",
+                                        msg.code, msg.reason
+                                    ));
+                                } else {
+                                    log("Received close message");
+                                }
+                                break;
+                            }
+                            Message::Frame(_msg) => {
+                                unreachable!();
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        log(format!("Error: {e}").as_str());
+                    }
+                }
+            } else {
+                break;
+            }
+        }
+        self.get_stream().close(None).await.unwrap();
+    }
+    */
 }
 
 /// Match queue
@@ -64,84 +137,19 @@ impl MatchQueue {
         log("match queue start!");
 
         loop {
-            let mut resv = self.receiver.recv().await.unwrap();
-            resv.connect().await;
+            let mut userdata = self.receiver.recv().await.unwrap();
+            // wait until websocket connection finished.
+            userdata.connect().await;
             log("connect complete");
 
-            resv.open_stream
-                .as_mut()
-                .unwrap()
-                .send(Message::text("tk"))
-                .await
-                .unwrap();
+            self.queue.push_back(userdata);
+            log(&format!("current queue size: {:?}", self.queue.len()));
 
-            resv.open_stream
-                .as_mut()
-                .unwrap()
-                .send(Message::text("good"))
-                .await
-                .unwrap();
-
-            loop {
-                let m = resv.open_stream.as_mut().unwrap().next().await;
-                let websocket = resv.open_stream.as_mut().unwrap();
-
-                if let Some(ref message) = m {
-                    match message {
-                        Ok(message) => {
-                            match message {
-                                Message::Text(msg) => {
-                                    println!("Received text message: {msg}");
-                                    websocket
-                                        .send(Message::text("Thank you, come again."))
-                                        .await
-                                        .unwrap();
-                                }
-                                Message::Binary(msg) => {
-                                    println!("Received binary message: {msg:02X?}");
-                                    websocket
-                                        .send(Message::binary(b"Thank you, come again.".to_vec()))
-                                        .await
-                                        .unwrap();
-                                }
-                                Message::Ping(msg) => {
-                                    // No need to send a reply: tungstenite takes care of this for you.
-                                    println!("Received ping message: {msg:02X?}");
-                                }
-                                Message::Pong(msg) => {
-                                    println!("Received pong message: {msg:02X?}");
-                                }
-                                Message::Close(msg) => {
-                                    // No need to send a reply: tungstenite takes care of this for you.
-                                    if let Some(msg) = &msg {
-                                        println!(
-                                            "Received close message with code {} and message: {}",
-                                            msg.code, msg.reason
-                                        );
-                                    } else {
-                                        println!("Received close message");
-                                    }
-                                    break;
-                                }
-                                Message::Frame(_msg) => {
-                                    unreachable!();
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            log(format!("Error: {e}").as_str());
-                        }
-                    }
-                } else {
-                    break;
-                }
-            }
-
-            self.queue.push_back(resv);
             // make match
             if self.queue.len() >= 2 {
                 let player1 = self.queue.pop_front().unwrap();
                 let player2 = self.queue.pop_front().unwrap();
+
                 let init = GameInitData::new(
                     player1,
                     player2,
@@ -152,6 +160,7 @@ impl MatchQueue {
                 );
 
                 super::utility::log("make match");
+                gameq.send(init).await.unwrap();
             }
         }
     }

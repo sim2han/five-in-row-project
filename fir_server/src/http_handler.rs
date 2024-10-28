@@ -16,12 +16,6 @@ use tokio::net::TcpListener;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::Mutex;
 
-/*
-async fn hello(_: Request<hyper::body::Incoming>) -> Result<Response<Full<Bytes>>, Infallible> {
-    Ok(Response::new(Full::new(Bytes::from("Hello, World!"))))
-}
-*/
-
 fn empty() -> BoxBody<Bytes, hyper::Error> {
     Empty::<Bytes>::new()
         .map_err(|never| match never {})
@@ -38,7 +32,7 @@ pub async fn run_server(
     queue_sender: Sender<crate::match_queue::UserRegisterData>,
     data: Arc<Mutex<RealData>>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    log("http handle fn start!");
+    log("http handle fn start on 127.0.0.1:3000!");
 
     // bind ip and make listener
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
@@ -79,10 +73,13 @@ pub async fn run_server(
                             let (response, socket) = result.unwrap();
                             let socket = socket;
 
+                            log(&format!("new websocket {socket:?}"));
+
                             // send socket to user queue
-                            if let Err(e) = sender.send(UserRegisterData::new(socket)).await {
-                                log(format!("Error: {e}").as_str());
-                            };
+                            sender
+                                .send(UserRegisterData::new(String::from("Alice"), socket))
+                                .await
+                                .unwrap();
 
                             // map websocket response to Response<BoxBody<..>>
                             let mut res = Response::new(

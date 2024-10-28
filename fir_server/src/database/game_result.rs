@@ -1,5 +1,5 @@
 use super::{
-    game::{Side, TimeControl},
+    game::{Coord, Side, TimeControl},
     user_info::UserInfo,
 };
 use serde::{Deserialize, Serialize};
@@ -18,4 +18,5 @@ pub struct GameInfo {
     pub white_name: UserInfo,
     pub result: GameResult,
     pub time: TimeControl,
+    pub notation: Vec<Coord>,
 }

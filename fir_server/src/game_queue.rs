@@ -1,6 +1,7 @@
 use fir_game;
 
-use crate::{database::data::*, match_queue::UserRegisterData};
+use crate::socket::Socket;
+use crate::{database::data::*, match_queue::UserRegisterData, prelude::*};
 use hyper::upgrade::Upgraded;
 use hyper_tungstenite::WebSocketStream;
 use hyper_util::rt::TokioIo;
@@ -76,23 +77,65 @@ impl GameRoom {
 
     // this function bring its data,
     // so data will be deleted when this function ends
-    pub async fn run(self, sender: Sender<crate::database::UpdateQuery>) {
-        let (s, mut r) = channel(10);
+    pub async fn run(mut self, sender: Sender<crate::database::UpdateQuery>) {
+        log("Game Room Start");
 
-        let ms = s.clone();
-        tokio::spawn(Self::player1_receive(ms.clone()));
+        // make socket handler
+        let socket0 = Socket::new(self.users[0].open_stream.take().unwrap());
+        let socket1 = Socket::new(self.users[1].open_stream.take().unwrap());
 
-        let ms = s.clone();
-        tokio::spawn(Self::player2_receive(ms.clone()));
+        let (player0_tx, mut player0_rx) = socket0.get_channel();
+        let (player1_tx, mut player1_rx) = socket1.get_channel();
 
-        loop {
-            let message = r.recv().await.unwrap();
-        }
+        tokio::spawn(socket0.run());
+        tokio::spawn(socket1.run());
+
+        let (tx, mut rx) = channel(10);
+
+        let tx1 = Sender::clone(&tx);
+        tokio::spawn(async move {
+            loop {
+                if let Ok(message) = player0_rx.recv().await {
+                    if let Stopper::Go(message) = message {
+                        log(&format!("Seeeeend {}", message));
+                        tx1.send(message).await;
+                    } else {
+                        break;
+                    }
+                }
+            }
+        });
+
+        let tx2 = Sender::clone(&tx);
+        tokio::spawn(async move {
+            loop {
+                if let Ok(message) = player1_rx.recv().await {
+                    if let Stopper::Go(message) = message {
+                        tx2.send(message).await;
+                    } else {
+                        break;
+                    }
+                } else {
+                    //log("bbbbb");
+                }
+            }
+        });
+
+        player0_tx.send(Stopper::Go(String::from("asdfasdf")));
+
+        let handle = tokio::spawn(async move {
+            loop {
+                while let Some(message) = rx.recv().await {
+                    log(&format!("game receive message: {message:?}"));
+
+                    player0_tx.send(Stopper::Go(message.clone()));
+                    player1_tx.send(Stopper::Go(message));
+                }
+            }
+        });
+
+        handle.await;
     }
-
-    async fn player1_receive(sender: Sender<PlayCommand>) {}
-
-    async fn player2_receive(sender: Sender<PlayCommand>) {}
 }
 
 /// command interthrowd by client and server
