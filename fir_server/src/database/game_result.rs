@@ -14,8 +14,8 @@ pub enum GameResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameInfo {
-    pub black_name: UserInfo,
-    pub white_name: UserInfo,
+    pub black_user: UserInfo,
+    pub white_user: UserInfo,
     pub result: GameResult,
     pub time: TimeControl,
     pub notation: Vec<Coord>,

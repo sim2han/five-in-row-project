@@ -1,16 +1,16 @@
-use crate::database::RealData;
+use crate::database::data::UserInfo;
+use crate::database::{RealData, UpdateQuery};
 use crate::prelude::*;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
 use crate::match_queue::UserRegisterData;
-use http_body_util::{combinators::BoxBody, BodyExt};
-use http_body_util::{Empty, Full};
+use http_body_util::{combinators::BoxBody, BodyExt, Empty, Full};
 use hyper::body::{self, Bytes};
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
-use hyper::{Method, StatusCode};
-use hyper::{Request, Response};
+use hyper::{Method, StatusCode, body::Body};
+use hyper::{Request, Response, };
 use hyper_util::rt::TokioIo;
 use tokio::net::TcpListener;
 use tokio::sync::mpsc::Sender;
@@ -30,9 +30,10 @@ fn full<T: Into<Bytes>>(chunk: T) -> BoxBody<Bytes, hyper::Error> {
 
 pub async fn run_server(
     queue_sender: Sender<crate::match_queue::UserRegisterData>,
+    update_sender: Sender<UpdateQuery>,
     data: Arc<Mutex<RealData>>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    log("http handle fn start on 127.0.0.1:3000!");
+    log("http handle fn starts on 127.0.0.1:3000!");
 
     // bind ip and make listener
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
@@ -48,10 +49,12 @@ pub async fn run_server(
         // make service function
         // https://hyper.rs/guides/1/server/echo/
         // make copy and move sender and data
-        let sender = queue_sender.clone();
+        let queue_sender = queue_sender.clone();
+        let update_sender = update_sender.clone();
         let data = data.clone();
         let service = service_fn(move |mut req: Request<body::Incoming>| {
-            let sender = sender.clone();
+            let queue_sender = queue_sender.clone();
+            let update_sender = update_sender.clone();
             let data = data.clone();
             async move {
                 match (req.method(), req.uri().path()) {
@@ -59,6 +62,26 @@ pub async fn run_server(
 
                     // check server state
                     (&Method::GET, "/state") => Ok(Response::new(full("I'm fine"))),
+
+                    (&Method::GET, "/getusers") => {
+                        let data = data.lock().await;
+                        let data = data.get_all_user_serizlie().unwrap();
+                        Ok(Response::new(full(data)))
+                    }
+
+                    (&Method::GET, "/getgames") => {
+                        let data = data.lock().await;
+                        let data = data.get_all_game_serialize().unwrap();
+                        Ok(Response::new(full(data)))
+                    }
+
+                    (&Method::POST, "/register") => {
+                        let body = req.collect().await.unwrap().to_bytes();
+                        let body_str = String::from_utf8(body.to_vec()).unwrap();
+                        let user_info: UserInfo = serde_json::from_str(&body_str).unwrap();
+                        update_sender.send(UpdateQuery::UserInfo(user_info)).await.unwrap();
+                        Ok(Response::new(full(body_str)))
+                    }
 
                     // connect user with websocket request
                     // https://crates.io/crates/hyper-tungstenite
@@ -76,7 +99,7 @@ pub async fn run_server(
                             log(&format!("new websocket {socket:?}"));
 
                             // send socket to user queue
-                            sender
+                            queue_sender
                                 .send(UserRegisterData::new(String::from("Alice"), socket))
                                 .await
                                 .unwrap();
@@ -98,18 +121,10 @@ pub async fn run_server(
                         }
                     }
 
-                    // database access test
-                    (&Method::GET, "/getall") => {
-                        let data = data.lock().await;
-                        let data = data.get_all_user_serizlie().unwrap();
-                        Ok(Response::new(full(data)))
-                    }
-
                     // default
                     _ => {
                         let mut not_found = Response::new(empty());
                         *not_found.status_mut() = StatusCode::NOT_FOUND;
-                        // type specifing in async block
                         // https://rust-lang.github.io/async-book/07_workarounds/02_err_in_async_blocks.html
                         Ok::<Response<BoxBody<hyper::body::Bytes, hyper::Error>>, hyper::Error>(
                             not_found,

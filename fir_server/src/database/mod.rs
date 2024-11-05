@@ -20,7 +20,7 @@ pub mod data {
 
 pub struct RealData {
     user_infos: Vec<user_info::UserInfo>,
-    game_results: Vec<data::GameResult>,
+    game_results: Vec<data::GameInfo>,
 }
 
 impl RealData {
@@ -36,7 +36,7 @@ impl RealData {
         self.user_infos.push(data);
     }
 
-    fn add_game_result(&mut self, data: data::GameResult) {
+    fn add_game_result(&mut self, data: data::GameInfo) {
         log(&format!("add game result {:?}", data));
         self.game_results.push(data);
     }
@@ -60,12 +60,23 @@ impl RealData {
         let str = serde_json::to_string(&self.user_infos)?;
         Ok(str)
     }
+
+    pub fn get_all_game(&self) -> &Vec<data::GameInfo> {
+        &self.game_results
+    }
+
+    pub fn get_all_game_serialize(
+        &self,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        let str = serde_json::to_string(&self.game_results)?;
+        Ok(str)
+    }
 }
 
 #[derive(Debug)]
 pub enum UpdateQuery {
     UserInfo(user_info::UserInfo),
-    GameResult(data::GameResult),
+    GameInfo(data::GameInfo),
 }
 
 pub struct DataManager {
@@ -102,7 +113,7 @@ impl DataManager {
             let mut data = self.data.lock().await;
 
             match value {
-                UpdateQuery::GameResult(s) => {
+                UpdateQuery::GameInfo(s) => {
                     data.add_game_result(s);
                 }
                 UpdateQuery::UserInfo(s) => {

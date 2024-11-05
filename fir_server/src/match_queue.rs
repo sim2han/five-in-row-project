@@ -36,7 +36,7 @@ impl UserRegisterData {
     fn get_stream(&mut self) -> &mut WebSocketStream<TokioIo<Upgraded>> {
         self.open_stream.as_mut().unwrap()
     }
-/*
+    /*
     async fn sample_run(&mut self) {
         log(&format!("sample run start"));
 
