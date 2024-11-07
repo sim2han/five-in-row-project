@@ -39,18 +39,18 @@ impl Socket {
         let h1 = tokio::spawn(async move {
             let tx = self.tx_out.clone();
             loop {
-                let mut socket = socketc.lock().await;
-                let message = socket.next().await;
-
+                let mut message;
+                {
+                    let mut socket = socketc.lock().await;
+                    message = socket.next();
+                }
+                let message = message.await;
                 if let Some(ref message) = message {
                     match message {
                         Ok(message) => match message {
                             Message::Text(msg) => {
                                 log(&format!("Received text message: {msg:?}"));
                                 tx.send(Stopper::Go(String::from(msg))).unwrap();
-                            }
-                            Message::Binary(msg) => {
-                                log(&format!("Received binary message: {msg:02X?}"));
                             }
                             _ => (),
                         },

@@ -44,16 +44,16 @@ pub async fn run(
 
 async fn add_sample_datas(tx: DbSender) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let user_info = vec![
-        UserInfo {
-            id: String::from("Alice"),
-            pwd: String::from("1234"),
-            rating: 100,
-        },
-        UserInfo {
-            id: String::from("Jonathan"),
-            pwd: String::from("qwerty"),
-            rating: 200,
-        },
+        UserInfo::new(
+            String::from("Alice"),
+            String::from("1234"),
+            100,
+        ),
+        UserInfo::new(
+            String::from("Jonathan"),
+            String::from("qwerty"),
+            200,
+        ),
     ];
     let game_info = vec![
         GameInfo {

@@ -98,7 +98,7 @@ impl GameRoom {
                 if let Ok(message) = player0_rx.recv().await {
                     if let Stopper::Go(message) = message {
                         log(&format!("Seeeeend {}", message));
-                        tx1.send(message).await;
+                        tx1.send(message).await.unwrap();
                     } else {
                         break;
                     }
@@ -111,7 +111,7 @@ impl GameRoom {
             loop {
                 if let Ok(message) = player1_rx.recv().await {
                     if let Stopper::Go(message) = message {
-                        tx2.send(message).await;
+                        tx2.send(message).await.unwrap();
                     } else {
                         break;
                     }
@@ -121,9 +121,9 @@ impl GameRoom {
             }
         });
 
-        player0_tx.send(Stopper::Go(String::from("asdfasdf")));
+        //player0_tx.send(Stopper::Go(String::from("asdfasdf")));
 
-        let handle = tokio::spawn(async move {
+        tokio::spawn(async move {
             loop {
                 while let Some(message) = rx.recv().await {
                     log(&format!("game receive message: {message:?}"));
@@ -132,9 +132,7 @@ impl GameRoom {
                     player1_tx.send(Stopper::Go(message));
                 }
             }
-        });
-
-        handle.await;
+        }).await.unwrap();
     }
 }
 
