@@ -28,7 +28,11 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error + Sync + Send>> {
     let mut game_match = match_queue::MatchQueue::new();
     let matchq = game_match.get_sender();
 
-    let server_handle = spawn(http_handler::run_server(matchq, dbq.clone(), real_db.clone()));
+    let server_handle = spawn(http_handler::run_server(
+        matchq,
+        dbq.clone(),
+        real_db.clone(),
+    ));
     let match_queue_handle = spawn(game_match.run(gameq.clone()));
     let game_queue_handle = spawn(game.run(dbq.clone()));
     let db_handle = spawn(db.run());

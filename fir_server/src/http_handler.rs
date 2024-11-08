@@ -1,5 +1,5 @@
-use crate::database::data::UserInfo;
-use crate::database::{RealData, UpdateQuery};
+use crate::database::data::UserData;
+use crate::database::{info, Database, UpdateQuery};
 use crate::prelude::*;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -9,8 +9,8 @@ use http_body_util::{combinators::BoxBody, BodyExt, Empty, Full};
 use hyper::body::{self, Bytes};
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
-use hyper::{Method, StatusCode, body::Body};
-use hyper::{Request, Response, };
+use hyper::{body::Body, Method, StatusCode};
+use hyper::{Request, Response};
 use hyper_util::rt::TokioIo;
 use tokio::net::TcpListener;
 use tokio::sync::mpsc::Sender;
@@ -31,7 +31,7 @@ fn full<T: Into<Bytes>>(chunk: T) -> BoxBody<Bytes, hyper::Error> {
 pub async fn run_server(
     queue_sender: Sender<crate::match_queue::UserRegisterData>,
     update_sender: Sender<UpdateQuery>,
-    data: Arc<Mutex<RealData>>,
+    data: Arc<Mutex<Database>>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     log("http handle fn starts on 127.0.0.1:3000!");
 
@@ -78,8 +78,11 @@ pub async fn run_server(
                     (&Method::POST, "/register") => {
                         let body = req.collect().await.unwrap().to_bytes();
                         let body_str = String::from_utf8(body.to_vec()).unwrap();
-                        let user_info: UserInfo = serde_json::from_str(&body_str).unwrap();
-                        update_sender.send(UpdateQuery::UserInfo(user_info)).await.unwrap();
+                        let user_info: info::UserInfo = serde_json::from_str(&body_str).unwrap();
+                        update_sender
+                            .send(UpdateQuery::UserData(user_info.into()))
+                            .await
+                            .unwrap();
                         Ok(Response::new(full(body_str)))
                     }
 

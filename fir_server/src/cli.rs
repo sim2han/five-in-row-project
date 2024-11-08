@@ -1,13 +1,15 @@
 use tokio::sync::Mutex;
 
-use crate::database::{data::*, DbSender, RealData, UpdateQuery};
+use crate::database::data;
+use crate::database::data::Notation;
+use crate::database::{data::*, DbSender, Database, UpdateQuery};
 use crate::prelude::*;
 use std::io;
 use std::sync::Arc;
 
 pub async fn run(
     tx: DbSender,
-    db: Arc<Mutex<RealData>>,
+    db: Arc<Mutex<Database>>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     loop {
         let mut buf = String::new();
@@ -44,60 +46,100 @@ pub async fn run(
 
 async fn add_sample_datas(tx: DbSender) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let user_info = vec![
-        UserInfo::new(
-            String::from("Alice"),
-            String::from("1234"),
-            100,
-        ),
-        UserInfo::new(
-            String::from("Jonathan"),
-            String::from("qwerty"),
-            200,
-        ),
+        data::UserData {
+            id: String::from("Alice"),
+            pwd: String::from("1234"),
+            rating: 100,
+        },
+        data::UserData {
+            id: String::from("Jonathan"),
+            pwd: String::from("qwerty"),
+            rating: 200,
+        },
     ];
     let game_info = vec![
-        GameInfo {
+        data::GameData {
             black_user: user_info[0].clone(),
             white_user: user_info[1].clone(),
             result: GameResult::Draw,
-            time: TimeControl {
-                seconds: 300,
-                fisher: 0,
-            },
-            notation: vec![
-                Coord { x: 5, y: 5 },
-                Coord { x: 5, y: 6 },
-                Coord { x: 6, y: 5 },
-                Coord { x: 4, y: 6 },
-                Coord { x: 7, y: 7 },
-                Coord { x: 4, y: 7 },
+            notations: vec![
+                Notation {
+                    is_black: true,
+                    x: 5,
+                    y: 5,
+                },
+                Notation {
+                    is_black: false,
+                    x: 5,
+                    y: 6,
+                },
+                Notation {
+                    is_black: true,
+                    x: 6,
+                    y: 5,
+                },
+                Notation {
+                    is_black: false,
+                    x: 4,
+                    y: 6,
+                },
+                Notation {
+                    is_black: true,
+                    x: 7,
+                    y: 7,
+                },
+                Notation {
+                    is_black: false,
+                    x: 4,
+                    y: 7,
+                },
             ],
         },
-        GameInfo {
+        data::GameData {
             black_user: user_info[1].clone(),
             white_user: user_info[0].clone(),
             result: GameResult::Win(Side::Black),
-            time: TimeControl {
-                seconds: 60,
-                fisher: 1,
-            },
-            notation: vec![
-                Coord { x: 5, y: 5 },
-                Coord { x: 5, y: 6 },
-                Coord { x: 6, y: 5 },
-                Coord { x: 4, y: 6 },
-                Coord { x: 7, y: 7 },
-                Coord { x: 4, y: 7 },
+            notations: vec![
+                Notation {
+                    is_black: true,
+                    x: 5,
+                    y: 5,
+                },
+                Notation {
+                    is_black: false,
+                    x: 5,
+                    y: 6,
+                },
+                Notation {
+                    is_black: true,
+                    x: 6,
+                    y: 5,
+                },
+                Notation {
+                    is_black: false,
+                    x: 4,
+                    y: 6,
+                },
+                Notation {
+                    is_black: true,
+                    x: 7,
+                    y: 7,
+                },
+                Notation {
+                    is_black: false,
+                    x: 4,
+                    y: 7,
+                },
             ],
         },
     ];
 
     for info in user_info {
-        tx.send(UpdateQuery::UserInfo(info)).await?;
+        tx.send(UpdateQuery::UserData(info)).await?;
     }
 
     for info in game_info {
-        tx.send(UpdateQuery::GameInfo(info)).await?;
+        tx.send(UpdateQuery::GameData(info)).await?;
     }
 
     Ok(())

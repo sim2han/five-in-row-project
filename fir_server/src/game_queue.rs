@@ -132,12 +132,8 @@ impl GameRoom {
                     player1_tx.send(Stopper::Go(message));
                 }
             }
-        }).await.unwrap();
+        })
+        .await
+        .unwrap();
     }
-}
-
-/// command interthrowd by client and server
-#[derive(Debug, Clone, Copy)]
-struct PlayCommand {
-    side: Side,
 }

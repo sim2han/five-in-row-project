@@ -39,11 +39,8 @@ impl Socket {
         let h1 = tokio::spawn(async move {
             let tx = self.tx_out.clone();
             loop {
-                let mut message;
-                {
-                    let mut socket = socketc.lock().await;
-                    message = socket.next();
-                }
+                let mut socket = socketc.lock().await;
+                let message = socket.next();
                 let message = message.await;
                 if let Some(ref message) = message {
                     match message {
@@ -80,6 +77,6 @@ impl Socket {
             }
         });
 
-        tokio::join!(h1, h2);
+        let _ = tokio::join!(h1, h2);
     }
 }
