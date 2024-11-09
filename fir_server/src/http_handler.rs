@@ -78,12 +78,65 @@ pub async fn run_server(
                     (&Method::POST, "/register") => {
                         let body = req.collect().await.unwrap().to_bytes();
                         let body_str = String::from_utf8(body.to_vec()).unwrap();
-                        let user_info: info::UserInfo = serde_json::from_str(&body_str).unwrap();
-                        update_sender
-                            .send(UpdateQuery::UserData(user_info.into()))
-                            .await
+                        log(&format!("register {body_str}"));
+                        let user_info: info::RegisterInfo =
+                            serde_json::from_str(&body_str).unwrap();
+                        let mut data = data.lock().await;
+                        let key = data.register_user(user_info);
+                        let response = serde_json::to_string(&key).unwrap();
+                        Ok(Response::new(full(response)))
+                    }
+
+                    (&Method::POST, "/login") => {
+                        let body = req.collect().await.unwrap().to_bytes();
+                        let body_str = String::from_utf8(body.to_vec()).unwrap();
+                        log(&format!("login {body_str}"));
+                        let info: info::LoginInfo = serde_json::from_str(&body_str).unwrap();
+                        let data = data.lock().await;
+                        let user = data.try_login(&info);
+                        let resp = match user {
+                            Some(user) => {
+                                serde_json::to_string::<info::UserKeyInfo>(&info::UserKeyInfo {
+                                    key: user.key.clone(),
+                                })
+                                .unwrap()
+                            }
+                            None => String::from("NOT FOUND"),
+                        };
+                        Ok(Response::new(full(resp)))
+                    }
+
+                    (&Method::GET, "/getuserinfo") => {
+                        let body = req.collect().await.unwrap().to_bytes();
+                        let body_str = String::from_utf8(body.to_vec()).unwrap();
+                        log(&format!("getuserinfo {body_str}"));
+                        let key: info::UserKeyInfo = serde_json::from_str(&body_str).unwrap();
+                        let data = data.lock().await;
+                        let user_data = data.get_user(&key);
+                        if let Some(user_data) = user_data {
+                            let resp = serde_json::to_string(&user_data).unwrap();
+                            Ok(Response::new(full(resp)))
+                        } else {
+                            let resp = serde_json::to_string(&info::UserInfo {
+                                id: String::new(),
+                                pwd: String::new(),
+                                rating: 0,
+                                key: String::new(),
+                            })
                             .unwrap();
-                        Ok(Response::new(full(body_str)))
+                            Ok(Response::new(full(resp)))
+                        }
+                    }
+
+                    (&Method::GET, "/getgameinfo") => {
+                        let body = req.collect().await.unwrap().to_bytes();
+                        let body_str = String::from_utf8(body.to_vec()).unwrap();
+                        log(&format!("getgameinfo {body_str}"));
+                        let key: info::UserKeyInfo = serde_json::from_str(&body_str).unwrap();
+                        let data = data.lock().await;
+                        let games = data.get_user_game(&key);
+                        let resp = serde_json::to_string(&games).unwrap();
+                        Ok(Response::new(full(resp)))
                     }
 
                     // connect user with websocket request

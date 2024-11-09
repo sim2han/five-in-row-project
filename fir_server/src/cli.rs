@@ -2,7 +2,7 @@ use tokio::sync::Mutex;
 
 use crate::database::data;
 use crate::database::data::Notation;
-use crate::database::{data::*, DbSender, Database, UpdateQuery};
+use crate::database::{data::*, Database, DbSender, UpdateQuery};
 use crate::prelude::*;
 use std::io;
 use std::sync::Arc;
@@ -50,11 +50,13 @@ async fn add_sample_datas(tx: DbSender) -> Result<(), Box<dyn std::error::Error 
             id: String::from("Alice"),
             pwd: String::from("1234"),
             rating: 100,
+            key: String::from("Alice_key"),
         },
         data::UserData {
             id: String::from("Jonathan"),
             pwd: String::from("qwerty"),
             rating: 200,
+            key: String::from("Jonathan_key"),
         },
     ];
     let game_info = vec![

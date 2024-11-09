@@ -1,5 +1,4 @@
 /// 게임 전반으로 사용되는 데이터들
-
 use super::info::{self, NotationInfo};
 use serde::{Deserialize, Serialize};
 
@@ -8,6 +7,7 @@ pub struct UserData {
     pub id: String,
     pub pwd: String,
     pub rating: u32,
+    pub key: String,
 }
 
 impl Into<info::UserInfo> for UserData {
@@ -16,6 +16,7 @@ impl Into<info::UserInfo> for UserData {
             id: self.id,
             pwd: self.pwd,
             rating: self.rating,
+            key: self.key,
         }
     }
 }
@@ -26,6 +27,7 @@ impl Into<UserData> for info::UserInfo {
             id: self.id,
             pwd: self.pwd,
             rating: self.rating,
+            key: self.key,
         }
     }
 }
@@ -46,7 +48,7 @@ pub struct Notation {
 impl Into<info::NotationInfo> for Notation {
     fn into(self) -> info::NotationInfo {
         NotationInfo {
-            is_black: self.is_black,
+            isblack: if self.is_black { 1 } else { 0 },
             x: self.x,
             y: self.y,
         }
@@ -56,7 +58,7 @@ impl Into<info::NotationInfo> for Notation {
 impl Into<Notation> for info::NotationInfo {
     fn into(self) -> Notation {
         Notation {
-            is_black: self.is_black,
+            is_black: if self.isblack == 1 { true } else { false },
             x: self.x,
             y: self.y,
         }
@@ -82,11 +84,32 @@ pub enum GameResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameData {
+    pub result: GameResult,
     pub black_user: UserData,
     pub white_user: UserData,
-    pub result: GameResult,
     //pub time: TimeControl,
     pub notations: Vec<Notation>,
+}
+
+impl Into<info::GameInfo> for GameData {
+    fn into(self) -> info::GameInfo {
+        let result = match self.result {
+            GameResult::Win(Side::White) => "white win",
+            GameResult::Win(Side::Black) => "black win",
+            GameResult::Resign(Side::White) => "white resign",
+            GameResult::Resign(Side::Black) => "blakc resign",
+            GameResult::Draw => "draw",
+            GameResult::Abort => "abort",
+        };
+        info::GameInfo {
+            result: String::from(result),
+            blackname: self.black_user.id.clone(),
+            blackrating: self.black_user.rating,
+            whitename: self.white_user.id.clone(),
+            whiterating: self.white_user.rating,
+            notations: self.notations.into_iter().map(|n| n.into()).collect(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

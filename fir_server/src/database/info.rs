@@ -15,7 +15,7 @@ pub struct UserKeyInfo {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct IdPwdInfo {
+pub struct LoginInfo {
     pub id: String,
     pub pwd: String,
 }
@@ -25,11 +25,12 @@ pub struct UserInfo {
     pub id: String,
     pub pwd: String,
     pub rating: u32,
+    pub key: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NotationInfo {
-    pub is_black: bool,
+    pub isblack: u32,
     pub x: u32,
     pub y: u32,
 }
@@ -37,8 +38,10 @@ pub struct NotationInfo {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameInfo {
     pub result: String,
-    pub black: UserInfo,
-    pub white: UserInfo,
+    pub blackname: String,
+    pub blackrating: u32,
+    pub whitename: String,
+    pub whiterating: u32,
     pub notations: Vec<NotationInfo>,
 }
 
