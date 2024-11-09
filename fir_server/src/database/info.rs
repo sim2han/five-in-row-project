@@ -30,9 +30,19 @@ pub struct UserInfo {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NotationInfo {
-    pub isblack: u32,
+    pub color: u32,
     pub x: u32,
     pub y: u32,
+}
+
+impl Default for NotationInfo {
+    fn default() -> Self {
+        NotationInfo {
+            color: 2,
+            x: 0,
+            y: 0,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -47,12 +57,15 @@ pub struct GameInfo {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameCommandInfo {
+    pub side: u32,
     pub command: String,
     pub notation: NotationInfo,
+    pub message: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameResponseInfo {
-    pub response: String,
+    pub command: String,
     pub notation: NotationInfo,
+    pub message: String,
 }

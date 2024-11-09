@@ -1,4 +1,8 @@
-use crate::{database::data::TimeControl, game_queue::GameInitData, prelude::*};
+use crate::{
+    database::data::{self, TimeControl},
+    game_queue::GameInitData,
+    prelude::*,
+};
 
 use futures::sink::SinkExt;
 use futures::stream::StreamExt;
@@ -11,7 +15,7 @@ use tungstenite::Message;
 
 #[derive(Debug)]
 pub struct UserRegisterData {
-    pub id: String,
+    pub data: data::UserData,
     //stream: hyper_tungstenite::WebSocketStream<TokioIo<Upgraded>>,
     stream: Option<HyperWebsocket>,
     pub open_stream: Option<WebSocketStream<TokioIo<Upgraded>>>,
@@ -19,9 +23,9 @@ pub struct UserRegisterData {
 
 impl UserRegisterData {
     //pub fn new(stream: hyper_tungstenite::WebSocketStream<TokioIo<Upgraded>>) -> Self {
-    pub fn new(id: String, stream: HyperWebsocket) -> Self {
+    pub fn new(data: data::UserData, stream: HyperWebsocket) -> Self {
         Self {
-            id,
+            data,
             stream: Some(stream),
             open_stream: None,
         }

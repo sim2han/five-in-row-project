@@ -66,32 +66,32 @@ async fn add_sample_datas(tx: DbSender) -> Result<(), Box<dyn std::error::Error 
             result: GameResult::Draw,
             notations: vec![
                 Notation {
-                    is_black: true,
+                    color: true,
                     x: 5,
                     y: 5,
                 },
                 Notation {
-                    is_black: false,
+                    color: false,
                     x: 5,
                     y: 6,
                 },
                 Notation {
-                    is_black: true,
+                    color: true,
                     x: 6,
                     y: 5,
                 },
                 Notation {
-                    is_black: false,
+                    color: false,
                     x: 4,
                     y: 6,
                 },
                 Notation {
-                    is_black: true,
+                    color: true,
                     x: 7,
                     y: 7,
                 },
                 Notation {
-                    is_black: false,
+                    color: false,
                     x: 4,
                     y: 7,
                 },
@@ -103,32 +103,32 @@ async fn add_sample_datas(tx: DbSender) -> Result<(), Box<dyn std::error::Error 
             result: GameResult::Win(Side::Black),
             notations: vec![
                 Notation {
-                    is_black: true,
+                    color: true,
                     x: 5,
                     y: 5,
                 },
                 Notation {
-                    is_black: false,
+                    color: false,
                     x: 5,
                     y: 6,
                 },
                 Notation {
-                    is_black: true,
+                    color: true,
                     x: 6,
                     y: 5,
                 },
                 Notation {
-                    is_black: false,
+                    color: false,
                     x: 4,
                     y: 6,
                 },
                 Notation {
-                    is_black: true,
+                    color: true,
                     x: 7,
                     y: 7,
                 },
                 Notation {
-                    is_black: false,
+                    color: false,
                     x: 4,
                     y: 7,
                 },

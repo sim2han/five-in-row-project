@@ -124,9 +124,30 @@ impl FirGame {
         }
     }
 
-    pub fn play(&mut self, x: usize, y: usize) -> Result<Response, error::FirError> {
-        self.state.set_square(x, y, self.order)?;
+    pub fn play(&mut self, x: u32, y: u32) -> Result<Response, error::FirError> {
+        self.state.set_square(x as usize, y as usize, self.order)?;
+        self.order = match self.order {
+            Order::Black => Order::White,
+            Order::White => Order::Black,
+        };
         Ok(Response::OnGoing)
+    }
+
+    pub fn board_state(&self) -> String {
+        let mut str = String::new();
+        let size = self.state.get_size();
+        for i in 0..size.x {
+            str.push('\n');
+            for j in 0..size.y {
+                let can = match self.state.get_square(i, j).unwrap() {
+                    SqaureState::Empty => '*',
+                    SqaureState::Black => 'X',
+                    SqaureState::White => '0',
+                };
+                str.push(can);
+            }
+        }
+        str
     }
 }
 

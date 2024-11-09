@@ -52,7 +52,7 @@ impl Socket {
                     match message {
                         Ok(message) => match message {
                             Message::Text(msg) => {
-                                log(&format!("Received text message: {msg:?}"));
+                                //log(&format!("Received text message: {msg:?}"));
                                 tx.send(Stopper::Go(String::from(msg))).unwrap();
                             }
                             _ => (),
@@ -65,6 +65,8 @@ impl Socket {
                     break;
                 }
             }
+
+            self.tx_out.send(Stopper::Stop).unwrap();
         });
 
         // websocket sender
@@ -74,7 +76,7 @@ impl Socket {
                 if let Stopper::Go(ref message) = message {
                     if true {
                         //let mut socket = socketc.lock().await;
-                        log(&format!("send text message {message}"));
+                        //log(&format!("send text message {message}"));
                         //socket.send(Message::text(message)).await.unwrap();
                         self.write.send(Message::text(message)).await.unwrap();
                     }

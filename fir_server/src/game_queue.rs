@@ -1,5 +1,8 @@
+use std::result;
+
 use fir_game;
 
+use crate::database::{data, info};
 use crate::socket::Socket;
 use crate::{database::data::*, match_queue::UserRegisterData, prelude::*};
 use hyper::upgrade::Upgraded;
@@ -78,7 +81,7 @@ impl GameRoom {
     // this function bring its data,
     // so data will be deleted when this function ends
     pub async fn run(mut self, sender: Sender<crate::database::UpdateQuery>) {
-        log("Game Room Start");
+        log("Game Start!");
 
         // make socket handler
         let socket0 = Socket::new(self.users[0].open_stream.take().unwrap());
@@ -90,6 +93,7 @@ impl GameRoom {
         tokio::spawn(socket0.run());
         tokio::spawn(socket1.run());
 
+        // make two receiver to one receiver with mpsc
         let (tx, mut rx) = channel(10);
 
         let tx1 = Sender::clone(&tx);
@@ -97,7 +101,6 @@ impl GameRoom {
             loop {
                 if let Ok(message) = player0_rx.recv().await {
                     if let Stopper::Go(message) = message {
-                        log(&format!("Seeeeend {}", message));
                         tx1.send(message).await.unwrap();
                     } else {
                         break;
@@ -115,25 +118,95 @@ impl GameRoom {
                     } else {
                         break;
                     }
-                } else {
-                    //log("bbbbb");
                 }
             }
         });
 
-        //player0_tx.send(Stopper::Go(String::from("asdfasdf")));
+        // send color
+        let command = data::GameResponse::Start(Side::Black);
+        let command: info::GameResponseInfo = command.into();
+        let command = serde_json::to_string(&command).unwrap();
+        player0_tx.send(Stopper::Go(command)).unwrap();
 
+        let command = data::GameResponse::Start(Side::White);
+        let command: info::GameResponseInfo = command.into();
+        let command = serde_json::to_string(&command).unwrap();
+        player1_tx.send(Stopper::Go(command)).unwrap();
+
+        // make game
+        let mut game = fir_game::FirGame::new();
+        let mut gamedata = data::GameData::new(self.users[0].data.clone(), self.users[1].data.clone());
+        //gamedata.black_user = self.users[0].data.clone();
+        //gamedata.white_user = self.users[1].data.clone();
+
+        // game command handler
         tokio::spawn(async move {
             loop {
-                while let Some(message) = rx.recv().await {
+                if let Some(message) = rx.recv().await {
                     log(&format!("game receive message: {message:?}"));
+                    let command: info::GameCommandInfo = serde_json::from_str(&message).unwrap();
+                    let command: data::GameCommand = command.into();
 
-                    player0_tx.send(Stopper::Go(message.clone()));
-                    player1_tx.send(Stopper::Go(message));
+                    match command.command_type {
+                        data::CommandType::Message => {
+                            let response = data::GameResponse::Message(command.message);
+                            let response: info::GameResponseInfo = response.into();
+                            let response = serde_json::to_string(&response).unwrap();
+                            if let Side::Black = command.side {
+                                player1_tx.send(Stopper::Go(response)).unwrap();
+                            } else {
+                                player0_tx.send(Stopper::Go(response)).unwrap();
+                            }
+                        }
+                        data::CommandType::Play => {
+                            gamedata.notations.push(command.notation);
+                            game.play(command.notation.x, command.notation.y).unwrap();
+                            log(&game.board_state());
+                            let response = data::GameResponse::OpponentPlay(command.notation);
+                            let response: info::GameResponseInfo = response.into();
+                            let response = serde_json::to_string(&response).unwrap();
+                            if let Side::Black = command.side {
+                                player1_tx.send(Stopper::Go(response)).unwrap();
+                            } else {
+                                player0_tx.send(Stopper::Go(response)).unwrap();
+                            }
+                        }
+                        data::CommandType::Resign => {
+                            let response = data::GameResponse::OpponentResign;
+                            let response: info::GameResponseInfo = response.into();
+                            let response = serde_json::to_string(&response).unwrap();
+                            if let Side::Black = command.side {
+                                player1_tx.send(Stopper::Go(response)).unwrap();
+                            } else {
+                                player0_tx.send(Stopper::Go(response)).unwrap();
+                            }
+
+                            // send game end response
+                            let response = data::GameResponse::GameEnd;
+                            let response: info::GameResponseInfo = response.into();
+                            let response = serde_json::to_string(&response).unwrap();
+                            player1_tx.send(Stopper::Go(response.clone())).unwrap();
+                            player0_tx.send(Stopper::Go(response)).unwrap();
+
+                            // stop async functions
+                            player1_tx.send(Stopper::Stop).unwrap();
+                            player0_tx.send(Stopper::Stop).unwrap();
+
+                            gamedata.result = GameResult::Resign(command.side);
+                            sender
+                                .send(crate::database::UpdateQuery::GameData(gamedata))
+                                .await
+                                .unwrap();
+                            break;
+                        }
+                        _ => (),
+                    }
                 }
             }
         })
         .await
         .unwrap();
+
+        log("Game End!");
     }
 }

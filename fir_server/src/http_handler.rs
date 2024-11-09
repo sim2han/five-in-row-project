@@ -1,4 +1,5 @@
 use crate::database::data::UserData;
+use crate::database::info::UserKeyInfo;
 use crate::database::{info, Database, UpdateQuery};
 use crate::prelude::*;
 use std::net::SocketAddr;
@@ -12,9 +13,12 @@ use hyper::service::service_fn;
 use hyper::{body::Body, Method, StatusCode};
 use hyper::{Request, Response};
 use hyper_util::rt::TokioIo;
+use std::collections::HashMap;
 use tokio::net::TcpListener;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::Mutex;
+use tungstenite::client::IntoClientRequest;
+use url::Url;
 
 fn empty() -> BoxBody<Bytes, hyper::Error> {
     Empty::<Bytes>::new()
@@ -149,6 +153,29 @@ pub async fn run_server(
                                 return Ok(Response::new(full("Upgrade fail")));
                             }
 
+                            // parse url and get key value
+                            let url =
+                                Url::parse(&format!("ws://localhost:{}", &req.uri().to_string()))
+                                    .expect("Failed to parse");
+                            let params: HashMap<String, String> = url
+                                .query_pairs()
+                                .map(|(k, v)| (k.into_owned(), v.into_owned()))
+                                .collect();
+                            let key = params.get("key").unwrap().clone();
+                            
+                            let user;
+                            if key == "" {
+                                user = UserData {
+                                    id: String::from("Anonymous"),
+                                    pwd: String::from(""),
+                                    rating: 0,
+                                    key: String::from(""),
+                                }
+                            } else {
+                                let data = data.lock().await;
+                                user = data.get_user(&UserKeyInfo { key: key }).unwrap();
+                            }
+
                             let (response, socket) = result.unwrap();
                             let socket = socket;
 
@@ -156,7 +183,7 @@ pub async fn run_server(
 
                             // send socket to user queue
                             queue_sender
-                                .send(UserRegisterData::new(String::from("Alice"), socket))
+                                .send(UserRegisterData::new(user, socket))
                                 .await
                                 .unwrap();
 
