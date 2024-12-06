@@ -1,5 +1,6 @@
 /// 게임 전반으로 사용되는 데이터들
 use super::info::{self, NotationInfo};
+use fir_game::Order;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -125,10 +126,19 @@ impl Into<info::GameInfo> for GameData {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum Side {
     White,
     Black,
+}
+
+impl Into<Order> for Side {
+    fn into(self) -> Order {
+        match self {
+            Side::White => Order::White,
+            Side::Black => Order::Black,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -182,7 +192,7 @@ impl Into<GameCommand> for info::GameCommandInfo {
 
 #[derive(Debug, Clone)]
 pub enum GameResponse {
-    Start(Side),
+    Start(Side, String),
     OpponentPlay(Notation),
     OpponentResign,
     OpponentOfferDraw,
@@ -193,7 +203,7 @@ pub enum GameResponse {
 impl Into<info::GameResponseInfo> for GameResponse {
     fn into(self) -> info::GameResponseInfo {
         let command = match self {
-            GameResponse::Start(_) => "Start",
+            GameResponse::Start(_, _) => "Start",
             GameResponse::OpponentPlay(_) => "OpponentPlay",
             GameResponse::OpponentResign => "OpponentResign",
             GameResponse::OpponentOfferDraw => "OpponentOfferDraw",
@@ -201,11 +211,11 @@ impl Into<info::GameResponseInfo> for GameResponse {
             GameResponse::Message(_) => "Message",
         };
         let notation = match self {
-            GameResponse::Start(Side::Black) => NotationInfo {
+            GameResponse::Start(Side::Black, _) => NotationInfo {
                 color: 0,
                 ..NotationInfo::default()
             },
-            GameResponse::Start(Side::White) => NotationInfo {
+            GameResponse::Start(Side::White, _) => NotationInfo {
                 color: 1,
                 ..NotationInfo::default()
             },
@@ -214,6 +224,7 @@ impl Into<info::GameResponseInfo> for GameResponse {
         };
         let message = match self {
             GameResponse::Message(s) => s,
+            GameResponse::Start(_, opp) => opp,
             _ => String::new(),
         };
         info::GameResponseInfo {

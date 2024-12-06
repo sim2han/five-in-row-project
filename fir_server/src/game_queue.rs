@@ -1,13 +1,7 @@
-use std::result;
-
 use fir_game;
-
 use crate::database::{data, info};
 use crate::socket::Socket;
 use crate::{database::data::*, match_queue::UserRegisterData, prelude::*};
-use hyper::upgrade::Upgraded;
-use hyper_tungstenite::WebSocketStream;
-use hyper_util::rt::TokioIo;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 
 pub struct GameInitData {
@@ -26,9 +20,6 @@ impl GameInitData {
     }
 }
 
-///
-/// <examples>
-///
 pub struct GameQueue {
     sender: Sender<GameInitData>,
     receiver: Receiver<GameInitData>,
@@ -123,12 +114,12 @@ impl GameRoom {
         });
 
         // send color
-        let command = data::GameResponse::Start(Side::Black);
+        let command = data::GameResponse::Start(Side::Black, self.users[1].data.id.clone());
         let command: info::GameResponseInfo = command.into();
         let command = serde_json::to_string(&command).unwrap();
         player0_tx.send(Stopper::Go(command)).unwrap();
 
-        let command = data::GameResponse::Start(Side::White);
+        let command = data::GameResponse::Start(Side::White, self.users[0].data.id.clone());
         let command: info::GameResponseInfo = command.into();
         let command = serde_json::to_string(&command).unwrap();
         player1_tx.send(Stopper::Go(command)).unwrap();
@@ -160,7 +151,7 @@ impl GameRoom {
                         }
                         data::CommandType::Play => {
                             gamedata.notations.push(command.notation);
-                            game.play(command.notation.x, command.notation.y).unwrap();
+                            game.play(command.notation.x, command.notation.y, command.side.into()).unwrap();
                             log(&game.board_state());
                             let response = data::GameResponse::OpponentPlay(command.notation);
                             let response: info::GameResponseInfo = response.into();
@@ -169,6 +160,12 @@ impl GameRoom {
                                 player1_tx.send(Stopper::Go(response)).unwrap();
                             } else {
                                 player0_tx.send(Stopper::Go(response)).unwrap();
+                            }
+
+                            // check game end
+                            let (result, side) = game.is_end();
+                            if result {
+
                             }
                         }
                         data::CommandType::Resign => {

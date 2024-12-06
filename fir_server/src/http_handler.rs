@@ -10,14 +10,13 @@ use http_body_util::{combinators::BoxBody, BodyExt, Empty, Full};
 use hyper::body::{self, Bytes};
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
-use hyper::{body::Body, Method, StatusCode};
+use hyper::{Method, StatusCode};
 use hyper::{Request, Response};
 use hyper_util::rt::TokioIo;
 use std::collections::HashMap;
 use tokio::net::TcpListener;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::Mutex;
-use tungstenite::client::IntoClientRequest;
 use url::Url;
 
 fn empty() -> BoxBody<Bytes, hyper::Error> {
@@ -105,7 +104,12 @@ pub async fn run_server(
                                 })
                                 .unwrap()
                             }
-                            None => String::from("NOT FOUND"),
+                            None => {
+                                serde_json::to_string::<info::UserKeyInfo>(&info::UserKeyInfo {
+                                    key: "".to_string(),
+                                })
+                                .unwrap()
+                            },
                         };
                         Ok(Response::new(full(resp)))
                     }

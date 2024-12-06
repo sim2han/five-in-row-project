@@ -8,10 +8,6 @@ use tokio::sync::{
     Mutex,
 };
 
-pub mod load {
-    pub use super::data;
-    pub use super::info;
-}
 /**
  * Save game play data
  */
@@ -31,12 +27,13 @@ impl Database {
 
     pub fn register_user(&mut self, s: info::RegisterInfo) -> info::UserKeyInfo {
         let key = s.id.clone() + "_key";
-        self.users.push(data::UserData {
+        let user = data::UserData {
             id: s.id.clone(),
             pwd: s.pwd,
             rating: 600,
             key: key.clone(),
-        });
+        };
+        self.add_user_data(user);
         info::UserKeyInfo { key: key }
     }
 
@@ -153,9 +150,6 @@ impl DataManager {
                         rating: 600,
                         key: s.id.clone() + "_key",
                     });
-                }
-                _ => {
-                    unreachable!();
                 }
             }
         }

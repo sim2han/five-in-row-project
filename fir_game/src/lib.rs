@@ -1,7 +1,3 @@
-use std::io::Empty;
-
-mod prelude {}
-
 mod error {
     #[derive(thiserror::Error, Debug)]
     pub enum FirError {
@@ -35,7 +31,7 @@ impl FirBoardSize {
     }
 }
 
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Copy, Clone, Debug, Default, PartialEq)]
 enum SqaureState {
     #[default]
     Empty,
@@ -43,8 +39,8 @@ enum SqaureState {
     White,
 }
 
-#[derive(Copy, Clone, Debug, Default)]
-enum Order {
+#[derive(Copy, Clone, Debug, Default, PartialEq)]
+pub enum Order {
     #[default]
     Black,
     White,
@@ -124,7 +120,10 @@ impl FirGame {
         }
     }
 
-    pub fn play(&mut self, x: u32, y: u32) -> Result<Response, error::FirError> {
+    pub fn play(&mut self, x: u32, y: u32, order: Order) -> Result<Response, error::FirError> {
+        if order != self.order {
+            return Ok(Response::OnGoing)
+        }
         self.state.set_square(x as usize, y as usize, self.order)?;
         self.order = match self.order {
             Order::Black => Order::White,
@@ -149,12 +148,88 @@ impl FirGame {
         }
         str
     }
-}
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+    pub fn is_end(&self) -> (bool, Order) {
+        for i in 0..8 {
+            for j in 0..3 {
+                let mut wstate = true;
+                let mut bstate = true;
+                for k in 0..5 {
+                    if self.state.get_square(i, j + k).unwrap() != SqaureState::White {
+                        wstate = false;
+                    }
+                    if self.state.get_square(i, j + k).unwrap() != SqaureState::Black {
+                        bstate = false;
+                    }
+                }
+                if wstate {
+                    return (true, Order::White);
+                } else if bstate {
+                    return (true, Order::Black);
+                }
+            }
+        }
 
-    #[test]
-    fn it_works() {}
+        for i in 0..3 {
+            for j in 0..8 {
+                let mut wstate = true;
+                let mut bstate = true;
+                for k in 0..5 {
+                    if self.state.get_square(i + k, j).unwrap() != SqaureState::White {
+                        wstate = false;
+                    }
+                    if self.state.get_square(i + k, j).unwrap() != SqaureState::Black {
+                        bstate = false;
+                    }
+                }
+                if wstate {
+                    return (true, Order::White);
+                } else if bstate {
+                    return (true, Order::Black);
+                }
+            }
+        }
+
+        for i in 0..3 {
+            for j in 0..3 {
+                let mut wstate = true;
+                let mut bstate = true;
+                for k in 0..5 {
+                    if self.state.get_square(i + k, j + k).unwrap() != SqaureState::White {
+                        wstate = false;
+                    }
+                    if self.state.get_square(i + k,j + k).unwrap() != SqaureState::Black {
+                        bstate = false;
+                    }
+                }
+                if wstate {
+                    return (true, Order::White);
+                } else if bstate {
+                    return (true, Order::Black);
+                }
+            }
+        }
+
+        for i in 5..8 {
+            for j in 0..3 {
+                let mut wstate = true;
+                let mut bstate = true;
+                for k in 0..5 {
+                    if self.state.get_square(i - k, j + k).unwrap() != SqaureState::White {
+                        wstate = false;
+                    }
+                    if self.state.get_square(i - k,j + k).unwrap() != SqaureState::Black {
+                        bstate = false;
+                    }
+                }
+                if wstate {
+                    return (true, Order::White);
+                } else if bstate {
+                    return (true, Order::Black);
+                }
+            }
+        }
+
+        (false, Order::White)
+    }
 }

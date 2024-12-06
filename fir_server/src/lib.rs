@@ -1,11 +1,9 @@
 mod cli;
 mod database;
-mod game;
 mod game_queue;
 mod http_handler;
 mod match_queue;
 mod socket;
-mod thread_pool;
 mod utility;
 
 pub mod prelude {
