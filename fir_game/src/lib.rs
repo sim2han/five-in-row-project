@@ -122,7 +122,7 @@ impl FirGame {
 
     pub fn play(&mut self, x: u32, y: u32, order: Order) -> Result<Response, error::FirError> {
         if order != self.order {
-            return Ok(Response::OnGoing)
+            return Ok(Response::OnGoing);
         }
         self.state.set_square(x as usize, y as usize, self.order)?;
         self.order = match self.order {
@@ -198,7 +198,7 @@ impl FirGame {
                     if self.state.get_square(i + k, j + k).unwrap() != SqaureState::White {
                         wstate = false;
                     }
-                    if self.state.get_square(i + k,j + k).unwrap() != SqaureState::Black {
+                    if self.state.get_square(i + k, j + k).unwrap() != SqaureState::Black {
                         bstate = false;
                     }
                 }
@@ -218,7 +218,7 @@ impl FirGame {
                     if self.state.get_square(i - k, j + k).unwrap() != SqaureState::White {
                         wstate = false;
                     }
-                    if self.state.get_square(i - k,j + k).unwrap() != SqaureState::Black {
+                    if self.state.get_square(i - k, j + k).unwrap() != SqaureState::Black {
                         bstate = false;
                     }
                 }

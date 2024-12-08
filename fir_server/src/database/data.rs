@@ -141,6 +141,15 @@ impl Into<Order> for Side {
     }
 }
 
+impl Into<Side> for Order {
+    fn into(self) -> Side {
+        match self {
+            Order::White => Side::White,
+            Order::Black => Side::Black,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct GameCommand {
     pub side: Side,

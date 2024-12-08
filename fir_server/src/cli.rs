@@ -132,6 +132,11 @@ async fn add_sample_datas(tx: DbSender) -> Result<(), Box<dyn std::error::Error 
                     x: 4,
                     y: 7,
                 },
+                Notation {
+                    color: true,
+                    x: 1,
+                    y: 1,
+                },
             ],
         },
     ];

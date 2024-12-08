@@ -1,7 +1,7 @@
-use fir_game;
 use crate::database::{data, info};
 use crate::socket::Socket;
 use crate::{database::data::*, match_queue::UserRegisterData, prelude::*};
+use fir_game;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 
 pub struct GameInitData {
@@ -51,21 +51,21 @@ impl GameQueue {
 pub struct GameRoom {
     // 0: black, 1: white
     users: [UserRegisterData; 2],
-    game: fir_game::FirGame,
+    //game: fir_game::FirGame,
 }
 
 impl GameRoom {
     pub fn new(player1: UserRegisterData, player2: UserRegisterData) -> Self {
         GameRoom {
             users: [player1, player2],
-            game: fir_game::FirGame::new(),
+            //game: fir_game::FirGame::new(),
         }
     }
 
     pub fn from_data(data: GameInitData) -> Self {
         GameRoom {
             users: [data.player1, data.player2],
-            game: fir_game::FirGame::new(),
+            //game: fir_game::FirGame::new(),
         }
     }
 
@@ -126,9 +126,8 @@ impl GameRoom {
 
         // make game
         let mut game = fir_game::FirGame::new();
-        let mut gamedata = data::GameData::new(self.users[0].data.clone(), self.users[1].data.clone());
-        //gamedata.black_user = self.users[0].data.clone();
-        //gamedata.white_user = self.users[1].data.clone();
+        let mut gamedata =
+            data::GameData::new(self.users[0].data.clone(), self.users[1].data.clone());
 
         // game command handler
         tokio::spawn(async move {
@@ -151,7 +150,8 @@ impl GameRoom {
                         }
                         data::CommandType::Play => {
                             gamedata.notations.push(command.notation);
-                            game.play(command.notation.x, command.notation.y, command.side.into()).unwrap();
+                            game.play(command.notation.x, command.notation.y, command.side.into())
+                                .unwrap();
                             log(&game.board_state());
                             let response = data::GameResponse::OpponentPlay(command.notation);
                             let response: info::GameResponseInfo = response.into();
@@ -165,7 +165,22 @@ impl GameRoom {
                             // check game end
                             let (result, side) = game.is_end();
                             if result {
+                                let response = data::GameResponse::GameEnd;
+                                let response: info::GameResponseInfo = response.into();
+                                let response = serde_json::to_string(&response).unwrap();
+                                player1_tx.send(Stopper::Go(response.clone())).unwrap();
+                                player0_tx.send(Stopper::Go(response)).unwrap();
 
+                                // stop async functions
+                                player1_tx.send(Stopper::Stop).unwrap();
+                                player0_tx.send(Stopper::Stop).unwrap();
+
+                                gamedata.result = GameResult::Win(side.into());
+                                sender
+                                    .send(crate::database::UpdateQuery::GameData(gamedata))
+                                    .await
+                                    .unwrap();
+                                break;
                             }
                         }
                         data::CommandType::Resign => {

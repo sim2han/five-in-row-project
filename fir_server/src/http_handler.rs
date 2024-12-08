@@ -33,7 +33,7 @@ fn full<T: Into<Bytes>>(chunk: T) -> BoxBody<Bytes, hyper::Error> {
 
 pub async fn run_server(
     queue_sender: Sender<crate::match_queue::UserRegisterData>,
-    update_sender: Sender<UpdateQuery>,
+    _update_sender: Sender<UpdateQuery>,
     data: Arc<Mutex<Database>>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     log("http handle fn starts on 127.0.0.1:3000!");
@@ -53,11 +53,9 @@ pub async fn run_server(
         // https://hyper.rs/guides/1/server/echo/
         // make copy and move sender and data
         let queue_sender = queue_sender.clone();
-        let update_sender = update_sender.clone();
         let data = data.clone();
         let service = service_fn(move |mut req: Request<body::Incoming>| {
             let queue_sender = queue_sender.clone();
-            let update_sender = update_sender.clone();
             let data = data.clone();
             async move {
                 match (req.method(), req.uri().path()) {
@@ -109,7 +107,7 @@ pub async fn run_server(
                                     key: "".to_string(),
                                 })
                                 .unwrap()
-                            },
+                            }
                         };
                         Ok(Response::new(full(resp)))
                     }
@@ -166,7 +164,7 @@ pub async fn run_server(
                                 .map(|(k, v)| (k.into_owned(), v.into_owned()))
                                 .collect();
                             let key = params.get("key").unwrap().clone();
-                            
+
                             let user;
                             if key == "" {
                                 user = UserData {
